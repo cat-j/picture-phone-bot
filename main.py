@@ -10,8 +10,6 @@ from telegram.ext import (
     Updater
     )
 
-from telethon.sync import TelegramClient
-
 
 JOIN_GAME = "join"
 
@@ -41,18 +39,13 @@ class BotRunner:
         self._reply_text(chat_update, context, self.texts.start)
 
     def newgame(self, chat_update, context):
-        chat = chat_update.message.chat
-
-        if chat.type == 'group':
-            chat_update.message.reply_text(
-                text=self.texts.newgame_group,
-                reply_markup=self._join_button(),
-                quote=False)
+        if chat_update.message.chat.type == 'group':
+            self._reply_join_button(chat_update)
         else:
-            self._reply_text(chat_update, context, self.texts.newgame_other)
+            self._reply_not_in_group(chat_update, context)
 
-    def run(self):
-        self._register_commands()
+    def run_bot(self):
+        self._register_handlers()
         self.updater.start_polling()
 
     ### PRIVATE ###
@@ -60,8 +53,18 @@ class BotRunner:
     def _handle_button_press(self, button_press_update, context):
         user_action = self._callback_query_data(button_press_update)
         if user_action == JOIN_GAME:
-            user_id = self._sender_user_id(button_press_update)
-            context.bot.send_message(chat_id=user_id, text="boston cream splat")
+            joining_user_id = self._sender_user_id(button_press_update)
+            context.bot.send_message(chat_id=joining_user_id, text="boston cream splat")
+
+    def _reply_join_button(self, chat_update_to_reply_to):
+        chat_update_to_reply_to.message.reply_text(
+            text=self.texts.newgame_group,
+            reply_markup=self._join_button(),
+            quote=False
+        )
+
+    def _reply_not_in_group(self, chat_update_to_reply_to, context):
+        self._reply_text(chat_update_to_reply_to, context, self.texts.newgame_other)
 
     def _callback_query_data(self, button_press_update):
         return button_press_update.callback_query.data
@@ -69,7 +72,7 @@ class BotRunner:
     def _sender_user_id(self, update):
         return update.effective_user.id
 
-    def _register_commands(self):
+    def _register_handlers(self):
         handlers = [
             CommandHandler('start', self.start),
             CommandHandler('newgame', self.newgame),
@@ -94,5 +97,5 @@ class BotRunner:
         return InlineKeyboardMarkup([[button]])
 
 
-raul = BotRunner()
-raul.run()
+runner = BotRunner()
+runner.run_bot()
