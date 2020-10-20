@@ -50,8 +50,8 @@ def test_after_writing_comes_drawing():
         "Chuck McGill"
     ]
     game_with_four_players = PicturePhoneGame(players)
-    next_player = game_with_four_players.next_player()
-    game_with_four_players.play_turn(next_player, "A cocobolo desk")
+    
+    play_turn_and_get_next_player(game_with_four_players, "A cocobolo desk")
 
     assert game_with_four_players.current_phase == "DRAWING"
 
@@ -81,7 +81,7 @@ def test_cannot_play_finished_game():
     ]
     game_with_four_players = PicturePhoneGame(players)
 
-    for i in range(0, len(players)):
+    while not game_with_four_players.finished:
         game_with_four_players.play_turn(game_with_four_players.next_player(), "A cocobolo desk")
 
     with pytest.raises(PicturePhoneGameError):
@@ -99,8 +99,7 @@ def test_everyone_gets_to_play():
     game_with_four_players = PicturePhoneGame(players)
 
     while not game_with_four_players.finished:
-        next_player = game_with_four_players.next_player()
-        game_with_four_players.play_turn(next_player, "A cocobolo desk")
+        next_player = play_turn_and_get_next_player(game_with_four_players, "A cocobolo desk")
         already_played.append(next_player)
 
     for player in already_played:
@@ -127,11 +126,18 @@ def test_game_results_are_stored_in_order():
     game_with_four_players = PicturePhoneGame(players)
 
     for submission in submissions:
-        next_player = game_with_four_players.next_player()
-        game_with_four_players.play_turn(next_player, submission)
+        next_player = play_turn_and_get_next_player(game_with_four_players, submission)
         already_played.append(next_player)
 
     game_results = game_with_four_players.results()
 
     assert game_results.players_in_order() == already_played
     assert game_results.submissions_in_order() == submissions
+
+
+### HELPERS ###
+
+def play_turn_and_get_next_player(game_to_play, submission_for_turn):
+    next_player = game_to_play.next_player()
+    game_to_play.play_turn(next_player, submission_for_turn)
+    return next_player
