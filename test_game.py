@@ -60,7 +60,7 @@ def test_player_cannot_join_game_already_in_course():
         game.join_player("Rick Schweikart")
 
 
-def test_5():
+def test_cannot_start_already_started_game():
     players = [
         "Jimmy McGill",
         "Kim Wexler",
