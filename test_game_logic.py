@@ -1,7 +1,7 @@
 import pytest
 
 from picture_phone_game import (
-    PicturePhoneGame,
+    PicturePhoneGameLogic,
     PicturePhoneGameError
 )
 
@@ -13,7 +13,7 @@ def test_game_can_start_with_at_least_four_players():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGame(players)
+    game_with_four_players = PicturePhoneGameLogic(players)
 
     assert game_with_four_players.next_player() in players
     assert not game_with_four_players.finished
@@ -27,7 +27,7 @@ def test_game_cannot_start_with_less_than_four_players():
     ]
 
     with pytest.raises(ValueError):
-        PicturePhoneGame(players)
+        PicturePhoneGameLogic(players)
 
 
 def test_game_starts_with_writing_phase():
@@ -37,7 +37,7 @@ def test_game_starts_with_writing_phase():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGame(players)
+    game_with_four_players = PicturePhoneGameLogic(players)
 
     assert game_with_four_players.current_phase == "WRITING"
 
@@ -49,7 +49,7 @@ def test_after_writing_comes_drawing():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGame(players)
+    game_with_four_players = PicturePhoneGameLogic(players)
     
     play_turn_and_get_next_player(game_with_four_players, "A cocobolo desk")
 
@@ -63,7 +63,7 @@ def test_game_finishes_in_correct_number_of_turns():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGame(players)
+    game_with_four_players = PicturePhoneGameLogic(players)
 
     for i in range(0, len(players)):
         assert not game_with_four_players.finished
@@ -79,7 +79,7 @@ def test_cannot_play_finished_game():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGame(players)
+    game_with_four_players = PicturePhoneGameLogic(players)
 
     while not game_with_four_players.finished:
         game_with_four_players.play_turn(game_with_four_players.next_player(), "A cocobolo desk")
@@ -96,7 +96,7 @@ def test_everyone_gets_to_play():
         "Chuck McGill"
     ]
     already_played = []
-    game_with_four_players = PicturePhoneGame(players)
+    game_with_four_players = PicturePhoneGameLogic(players)
 
     while not game_with_four_players.finished:
         next_player = play_turn_and_get_next_player(game_with_four_players, "A cocobolo desk")
@@ -123,7 +123,7 @@ def test_game_results_are_stored_in_order():
         "Four cocobolo desks"
     ]
     already_played = []
-    game_with_four_players = PicturePhoneGame(players)
+    game_with_four_players = PicturePhoneGameLogic(players)
 
     for submission in submissions:
         next_player = play_turn_and_get_next_player(game_with_four_players, submission)

@@ -2,7 +2,7 @@ WRITING = "WRITING"
 DRAWING = "DRAWING"
 
 
-class PicturePhoneGame:
+class PicturePhoneGameLogic:
 
     def __init__(self, players):
         if len(players) < 4:
@@ -58,3 +58,37 @@ class PicturePhoneGameResults:
 
     def submissions_in_order(self):
         return [move[1] for move in self.contents]
+
+
+class PicturePhoneGame:
+
+    def __init__(self, debug=False):
+        self.players = set()
+        self.game = None
+        self.debug = debug
+
+    def join_player(self, joining_player):
+        if not self._game_started():
+            self._add_player(joining_player)
+        else:
+            raise PicturePhoneGameError("Cannot join game after it has started.")
+
+    def start(self):
+        try:
+            self.game = PicturePhoneGameLogic(list(self.players))
+            return True
+        except ValueError:
+            raise PicturePhoneGameError("Cannot start game until at least 4 players have joined.")
+
+    ### PRIVATE ###
+
+    def _game_started(self):
+        return self.game != None
+
+    def _add_player(self, joining_player):
+        if not joining_player in self.players:
+            self.players.add(joining_player)
+            if self.debug:
+                print("Player {} joined".format(joining_player))
+        else:
+            raise PicturePhoneGameError("Player {} is already in the game.".format(joining_player))
