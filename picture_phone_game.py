@@ -5,9 +5,6 @@ DRAWING = "DRAWING"
 class PicturePhoneGameLogic:
 
     def __init__(self, players):
-        if len(players) < 4:
-            raise ValueError("Must have at least 4 players.")
-
         self.players = players
         self.finished = False
         self.current_phase = self._starting_phase()
@@ -68,6 +65,8 @@ class PicturePhoneGame:
         self.game_id = game_id
         self.debug = debug
 
+        self.MIN_PLAYERS = 4
+
     def join_player(self, joining_player):
         if not self._game_started():
             self._add_player(joining_player)
@@ -76,11 +75,10 @@ class PicturePhoneGame:
 
     def start(self):
         if not self._game_started():
-            try:
-                self.game_logic = PicturePhoneGameLogic(list(self.players))
-                return True
-            except ValueError:
+            if self._number_of_players() < self.MIN_PLAYERS:
                 raise PicturePhoneGameError("Cannot start game until at least 4 players have joined.")
+            self.game_logic = PicturePhoneGameLogic(list(self.players))
+            return True
         else:
             raise PicturePhoneGameError("Game already started.")
 
@@ -96,3 +94,6 @@ class PicturePhoneGame:
                 print("Player {} joined game {}".format(joining_player, self.game_id))
         else:
             raise PicturePhoneGameError("Player {} is already in the game.".format(joining_player))
+
+    def _number_of_players(self):
+        return len(self.players)

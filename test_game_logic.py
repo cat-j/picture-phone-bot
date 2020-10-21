@@ -19,17 +19,6 @@ def test_game_can_start_with_at_least_four_players():
     assert not game_with_four_players.finished
 
 
-def test_game_cannot_start_with_less_than_four_players():
-    players = [
-        "Mike Ehrmantraut",
-        "Stacey Ehrmantraut",
-        "Kaylee Ehrmantraut"
-    ]
-
-    with pytest.raises(ValueError):
-        PicturePhoneGameLogic(players)
-
-
 def test_game_starts_with_writing_phase():
     players = [
         "Jimmy McGill",
