@@ -13,10 +13,10 @@ def test_game_can_start_with_at_least_four_players():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGameLogic(players)
+    game_logic = PicturePhoneGameLogic(players)
 
-    assert game_with_four_players.next_player() in players
-    assert not game_with_four_players.finished
+    assert game_logic.next_player() in players
+    assert not game_logic.finished
 
 
 def test_game_starts_with_writing_phase():
@@ -26,9 +26,9 @@ def test_game_starts_with_writing_phase():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGameLogic(players)
+    game_logic = PicturePhoneGameLogic(players)
 
-    assert game_with_four_players.current_phase == "WRITING"
+    assert game_logic.current_phase == "WRITING"
 
 
 def test_after_writing_comes_drawing():
@@ -38,11 +38,11 @@ def test_after_writing_comes_drawing():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGameLogic(players)
+    game_logic = PicturePhoneGameLogic(players)
     
-    play_turn_and_get_next_player(game_with_four_players, "A cocobolo desk")
+    play_turn_and_get_next_player(game_logic, "A cocobolo desk")
 
-    assert game_with_four_players.current_phase == "DRAWING"
+    assert game_logic.current_phase == "DRAWING"
 
 
 def test_game_finishes_in_correct_number_of_turns():
@@ -52,13 +52,13 @@ def test_game_finishes_in_correct_number_of_turns():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGameLogic(players)
+    game_logic = PicturePhoneGameLogic(players)
 
     for i in range(0, len(players)):
-        assert not game_with_four_players.finished
-        game_with_four_players.play_turn(game_with_four_players.next_player(), "A cocobolo desk")
+        assert not game_logic.finished
+        game_logic.play_turn(game_logic.next_player(), "A cocobolo desk")
 
-    assert game_with_four_players.finished
+    assert game_logic.finished
 
 
 def test_cannot_play_finished_game():
@@ -68,13 +68,13 @@ def test_cannot_play_finished_game():
         "Howard Hamlin",
         "Chuck McGill"
     ]
-    game_with_four_players = PicturePhoneGameLogic(players)
+    game_logic = PicturePhoneGameLogic(players)
 
-    while not game_with_four_players.finished:
-        game_with_four_players.play_turn(game_with_four_players.next_player(), "A cocobolo desk")
+    while not game_logic.finished:
+        game_logic.play_turn(game_logic.next_player(), "A cocobolo desk")
 
     with pytest.raises(PicturePhoneGameError):
-        game_with_four_players.play_turn("Jimmy McGill", "A cocobolo desk")
+        game_logic.play_turn("Jimmy McGill", "A cocobolo desk")
 
 
 def test_everyone_gets_to_play():
@@ -85,10 +85,10 @@ def test_everyone_gets_to_play():
         "Chuck McGill"
     ]
     already_played = []
-    game_with_four_players = PicturePhoneGameLogic(players)
+    game_logic = PicturePhoneGameLogic(players)
 
-    while not game_with_four_players.finished:
-        next_player = play_turn_and_get_next_player(game_with_four_players, "A cocobolo desk")
+    while not game_logic.finished:
+        next_player = play_turn_and_get_next_player(game_logic, "A cocobolo desk")
         already_played.append(next_player)
 
     for player in already_played:
@@ -112,16 +112,33 @@ def test_game_results_are_stored_in_order():
         "Four cocobolo desks"
     ]
     already_played = []
-    game_with_four_players = PicturePhoneGameLogic(players)
+    game_logic = PicturePhoneGameLogic(players)
 
     for submission in submissions:
-        next_player = play_turn_and_get_next_player(game_with_four_players, submission)
+        next_player = play_turn_and_get_next_player(game_logic, submission)
         already_played.append(next_player)
 
-    game_results = game_with_four_players.results()
+    game_results = game_logic.results()
 
     assert game_results.players_in_order() == already_played
     assert game_results.submissions_in_order() == submissions
+
+
+def test_0():
+    game_logic = PicturePhoneGameLogic()
+    players = [
+        "Jimmy McGill",
+        "Kim Wexler",
+        "Howard Hamlin",
+        "Chuck McGill"
+    ]
+
+    with pytest.raises(PicturePhoneGameError):
+        game_logic.next_player()
+    
+    game_logic.set_players(players)
+
+    assert game_logic.next_player() in players
 
 
 ### HELPERS ###
