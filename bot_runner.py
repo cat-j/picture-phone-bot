@@ -1,7 +1,8 @@
 import logging
 
 from picture_phone_game import (
-    PicturePhoneGame
+    PicturePhoneGame,
+    PicturePhoneGameError
 )
 from telegram import (
     InlineKeyboardButton,
@@ -24,7 +25,7 @@ class GameDatabase:
         self.debug = debug
 
     def add_new_game(self, new_game_id):
-        self.contents[new_game_id] = PicturePhoneGame(self.debug)
+        self.contents[new_game_id] = PicturePhoneGame(new_game_id, self.debug)
 
     def get_game(self, game_id):
         return self.contents[game_id]
@@ -44,7 +45,7 @@ class BotRunner:
         self.token = self._token()
         self.updater = Updater(token=self.token, use_context=True)
         self.dispatcher = self.updater.dispatcher
-        self.games = GameDatabase()
+        self.games = GameDatabase(debug=True)
         self.texts = BotTexts()
 
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -81,9 +82,15 @@ class BotRunner:
         joining_user_id = self._sender_user_id(button_press_update)
         game_id = self._chat_id_from_update(button_press_update.callback_query)
         game = self.games.get_game(game_id)
-        game.join_player(joining_user_id)
 
-        context.bot.send_message(chat_id=joining_user_id, text="boston cream splat")
+        try:
+            game.join_player(joining_user_id)
+            context.bot.send_message(chat_id=joining_user_id, text="boston cream splat")
+        except PicturePhoneGameError:
+            context.bot.send_message(
+                chat_id=joining_user_id,
+                text="You've already joined that game."
+            )
 
     def _reply_join_button(self, chat_update_to_reply_to):
         chat_update_to_reply_to.message.reply_text(

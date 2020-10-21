@@ -62,9 +62,10 @@ class PicturePhoneGameResults:
 
 class PicturePhoneGame:
 
-    def __init__(self, debug=False):
+    def __init__(self, game_id=0, debug=False):
         self.players = set()
-        self.game = None
+        self.game_logic = None
+        self.game_id = game_id
         self.debug = debug
 
     def join_player(self, joining_player):
@@ -74,21 +75,24 @@ class PicturePhoneGame:
             raise PicturePhoneGameError("Cannot join game after it has started.")
 
     def start(self):
-        try:
-            self.game = PicturePhoneGameLogic(list(self.players))
-            return True
-        except ValueError:
-            raise PicturePhoneGameError("Cannot start game until at least 4 players have joined.")
+        if not self._game_started():
+            try:
+                self.game_logic = PicturePhoneGameLogic(list(self.players))
+                return True
+            except ValueError:
+                raise PicturePhoneGameError("Cannot start game until at least 4 players have joined.")
+        else:
+            raise PicturePhoneGameError("Game already started.")
 
     ### PRIVATE ###
 
     def _game_started(self):
-        return self.game != None
+        return self.game_logic != None
 
     def _add_player(self, joining_player):
         if not joining_player in self.players:
             self.players.add(joining_player)
             if self.debug:
-                print("Player {} joined".format(joining_player))
+                print("Player {} joined game {}".format(joining_player, self.game_id))
         else:
             raise PicturePhoneGameError("Player {} is already in the game.".format(joining_player))

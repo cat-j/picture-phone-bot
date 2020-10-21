@@ -60,6 +60,21 @@ def test_player_cannot_join_game_already_in_course():
         game.join_player("Rick Schweikart")
 
 
+def test_5():
+    players = [
+        "Jimmy McGill",
+        "Kim Wexler",
+        "Howard Hamlin",
+        "Chuck McGill"
+    ]
+    game = game_with_players(players)
+
+    game.start()
+
+    with pytest.raises(PicturePhoneGameError):
+        game.start()
+
+
 ### HELPERS ###
 
 def game_with_players(players):
