@@ -36,8 +36,10 @@ class BotTexts:
 
     def __init__(self):
         self.start = "dutch apple ass"
-        self.newgame_group = "dutch apple ass"
-        self.newgame_other = "you're not in a group"
+        self.newgame_group = "Join a new game of Picture Phone:"
+        self.newgame_other = "You need to be in a group to start a game."
+        self.startplaying_game_not_created = "You haven't created a game yet."
+        self.already_joined = "You've already joined that game."
 
 
 class BotRunner:
@@ -64,7 +66,7 @@ class BotRunner:
         else:
             self._reply_not_in_group(chat_update, context)
 
-    def startgame(self, chat_update, context):
+    def startplaying(self, chat_update, context):
         try:
             game = self._get_game_for_group(chat_update)
             game.start()
@@ -78,7 +80,7 @@ class BotRunner:
             self._reply_text(
                 update=chat_update,
                 context=context,
-                text_to_send="You haven't started a game yet."
+                text_to_send=self.texts.startplaying_game_not_created
             )
 
     def run_bot(self):
@@ -107,11 +109,14 @@ class BotRunner:
 
         try:
             game.join_player(joining_user_id)
-            context.bot.send_message(chat_id=joining_user_id, text="boston cream splat")
+            context.bot.send_message(
+                chat_id=joining_user_id,
+                text="You've joined game {}.".format(game_id)
+            )
         except PicturePhoneGameError:
             context.bot.send_message(
                 chat_id=joining_user_id,
-                text="You've already joined that game."
+                text=self.texts.already_joined
             )
 
     def _reply_join_button(self, chat_update_to_reply_to):
@@ -137,7 +142,7 @@ class BotRunner:
         handlers = [
             CommandHandler('start', self.start),
             CommandHandler('newgame', self.newgame),
-            CommandHandler('startgame', self.startgame),
+            CommandHandler('startplaying', self.startplaying),
             CallbackQueryHandler(self._handle_button_press)
         ]
 

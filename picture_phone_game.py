@@ -70,7 +70,7 @@ class PicturePhoneGame:
         self.game_logic = None
         self.game_id = game_id
         self.debug = debug
-
+        
         self.MIN_PLAYERS = 4
 
     def join_player(self, joining_player):
