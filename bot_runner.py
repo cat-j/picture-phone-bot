@@ -2,7 +2,8 @@ import logging
 
 from picture_phone_game import (
     PicturePhoneGame,
-    PicturePhoneGameError
+    PicturePhoneGameError,
+    NotEnoughPlayersError
 )
 from telegram import (
     InlineKeyboardButton,
@@ -63,6 +64,23 @@ class BotRunner:
         else:
             self._reply_not_in_group(chat_update, context)
 
+    def startgame(self, chat_update, context):
+        try:
+            game = self._get_game_for_group(chat_update)
+            game.start()
+        except NotEnoughPlayersError:
+            self._reply_text(
+                update=chat_update,
+                context=context,
+                text_to_send="You must wait until {} players have joined!".format(game.MIN_PLAYERS)
+            )
+        except KeyError:
+            self._reply_text(
+                update=chat_update,
+                context=context,
+                text_to_send="You haven't started a game yet."
+            )
+
     def run_bot(self):
         self._register_handlers()
         self.updater.start_polling()
@@ -72,6 +90,10 @@ class BotRunner:
     def _create_game_for_group(self, group_update):
         group_chat_id = self._chat_id_from_update(group_update)
         self.games.add_new_game(group_chat_id)
+
+    def _get_game_for_group(self, group_update):
+        game_id = self._chat_id_from_update(group_update)
+        return self.games.get_game(game_id)
 
     def _handle_button_press(self, button_press_update, context):
         user_action = self._callback_query_data(button_press_update)
@@ -115,6 +137,7 @@ class BotRunner:
         handlers = [
             CommandHandler('start', self.start),
             CommandHandler('newgame', self.newgame),
+            CommandHandler('startgame', self.startgame),
             CallbackQueryHandler(self._handle_button_press)
         ]
 

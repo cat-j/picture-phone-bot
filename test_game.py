@@ -2,7 +2,9 @@ import pytest
 
 from picture_phone_game import (
     PicturePhoneGame,
-    PicturePhoneGameError
+    PicturePhoneGameError,
+    PlayerAlreadyJoinedError,
+    NotEnoughPlayersError
 )
 
 
@@ -28,7 +30,7 @@ def test_game_cannot_start_with_less_than_four_players():
     ]
     game = game_with_players(players)
 
-    with pytest.raises(PicturePhoneGameError):
+    with pytest.raises(NotEnoughPlayersError):
         game.start()
 
 
@@ -41,7 +43,7 @@ def test_player_cannot_join_game_twice():
     ]
     game = game_with_players(players)
 
-    with pytest.raises(PicturePhoneGameError):
+    with pytest.raises(PlayerAlreadyJoinedError):
         game.join_player(players[0])
 
 

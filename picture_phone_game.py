@@ -41,6 +41,12 @@ class PicturePhoneGameLogic:
 class PicturePhoneGameError(RuntimeError):
     pass
 
+class NotEnoughPlayersError(PicturePhoneGameError):
+    pass
+
+class PlayerAlreadyJoinedError(PicturePhoneGameError):
+    pass
+
 
 class PicturePhoneGameResults:
 
@@ -76,7 +82,9 @@ class PicturePhoneGame:
     def start(self):
         if not self._game_started():
             if self._number_of_players() < self.MIN_PLAYERS:
-                raise PicturePhoneGameError("Cannot start game until at least 4 players have joined.")
+                raise NotEnoughPlayersError(
+                    "Cannot start game until at least {} players have joined.".format(self.MIN_PLAYERS)
+                )
             self.game_logic = PicturePhoneGameLogic(list(self.players))
             return True
         else:
@@ -93,7 +101,7 @@ class PicturePhoneGame:
             if self.debug:
                 print("Player {} joined game {}".format(joining_player, self.game_id))
         else:
-            raise PicturePhoneGameError("Player {} is already in the game.".format(joining_player))
+            raise PlayerAlreadyJoinedError("Player {} is already in the game.".format(joining_player))
 
     def _number_of_players(self):
         return len(self.players)
