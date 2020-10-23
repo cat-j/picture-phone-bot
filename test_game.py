@@ -78,7 +78,7 @@ def test_cannot_start_already_started_game():
         game.start()
 
 
-def test_0():
+def test_next_player_is_valid():
     players = [
         "Jimmy McGill",
         "Kim Wexler",

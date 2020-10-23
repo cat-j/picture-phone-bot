@@ -115,13 +115,19 @@ class PicturePhoneGame:
         self.game_id = game_id
         self.debug = debug
 
-    def start(self, context):
-        self.game.start()
-        player_id = self.game.get_next_player()
-        context.bot.send_message(
-            chat_id=player_id,
-            text="You're first! Write something for the next player to draw."
-        )
+    def start(self, update, context):
+        try:
+            self.game.start()
+            player_id = self.game.get_next_player()
+            context.bot.send_message(
+                chat_id=player_id,
+                text="You're first! Write something for the next player to draw."
+            )
+        except NotEnoughPlayersError:
+            context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="You must wait until {} players have joined!".format(self.min_players())
+            )
 
     def join_user(self, joining_user_id, context):
         try:

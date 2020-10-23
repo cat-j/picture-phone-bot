@@ -47,41 +47,40 @@ class BotRunner:
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.DEBUG)
 
-    ### PUBLIC ###
-
-    def start(self, chat_update, context):
-        self._reply_text(chat_update, context, BotTexts.start)
-
-    def newgame(self, chat_update, context):
-        if chat_update.message.chat.type in ['group', 'supergroup']:
-            self._reply_join_button(chat_update)
-            self._create_game_for_group(chat_update)
-        else:
-            self._reply_not_in_group(chat_update, context)
-
-    def startplaying(self, chat_update, context):
-        try:
-            game = self._get_game_for_group(chat_update)
-            game.start(context)
-        # TODO: handle these in PicturePhoneGame
-        except NotEnoughPlayersError:
-            self._reply_text(
-                update=chat_update,
-                context=context,
-                text_to_send="You must wait until {} players have joined!".format(game.min_players())
-            )
-        except KeyError:
-            self._reply_text(
-                update=chat_update,
-                context=context,
-                text_to_send=BotTexts.startplaying_game_not_created
-            )
-
     def run_bot(self):
         self._register_handlers()
         self.updater.start_polling()
 
-    ### PRIVATE ###
+    ### COMMAND HANDLERS ###
+
+    def start(self, update, context):
+        context.bot.send_message(chat_id=update.effective_chat.id, text=BotTexts.start)
+
+    def newgame(self, update, context):
+        if update.message.chat.type in ['group', 'supergroup']:
+            self._reply_join_button(update)
+            self._create_game_for_group(update)
+        else:
+            self._reply_not_in_group(update, context)
+
+    def startgame(self, update, context):
+        try:
+            game = self._get_game_for_group(update)
+            game.start(update, context)
+        except KeyError:
+            context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text=BotTexts.startplaying_game_not_created
+            )
+
+    ### OTHER HANDLERS ###
+
+    def _handle_button_press(self, button_press_update, context):
+        user_action = self._callback_query_data(button_press_update)
+        if user_action == JOIN_GAME:
+            self._join_user_who_pressed(button_press_update, context)
+
+    ### HELPERS ###
 
     def _create_game_for_group(self, group_update):
         group_chat_id = self._chat_id_from_update(group_update)
@@ -91,13 +90,8 @@ class BotRunner:
         game_id = self._chat_id_from_update(group_update)
         return self.games.get_game(game_id)
 
-    def _handle_button_press(self, button_press_update, context):
-        user_action = self._callback_query_data(button_press_update)
-        if user_action == JOIN_GAME:
-            self._join_user_who_pressed(button_press_update, context)
-
     def _join_user_who_pressed(self, button_press_update, context):
-        joining_user_id = self._sender_user_id(button_press_update)
+        joining_user_id = button_press_update.effective_user.id
         game_id = self._chat_id_from_update(button_press_update.callback_query)
         game = self.games.get_game(game_id)
 
@@ -121,7 +115,7 @@ class BotRunner:
         return chat_update.message.chat.id
 
     def _reply_not_in_group(self, chat_update_to_reply_to, context):
-        self._reply_text(chat_update_to_reply_to, context, BotTexts.newgame_other)
+        context.bot.send_message(chat_id=chat_update_to_reply_to.effective_chat.id, text=BotTexts.newgame_other)
 
     def _callback_query_data(self, button_press_update):
         return button_press_update.callback_query.data
@@ -133,15 +127,12 @@ class BotRunner:
         handlers = [
             CommandHandler('start', self.start),
             CommandHandler('newgame', self.newgame),
-            CommandHandler('startplaying', self.startplaying),
+            CommandHandler('startgame', self.startgame),
             CallbackQueryHandler(self._handle_button_press)
         ]
 
         for handler in handlers:
             self.dispatcher.add_handler(handler)
-
-    def _reply_text(self, update, context, text_to_send):
-        context.bot.send_message(chat_id=update.effective_chat.id, text=text_to_send)
 
     def _token(self):
         with open("./token", 'r') as f:
