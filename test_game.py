@@ -1,5 +1,6 @@
 import pytest
 
+from game_errors import *
 from picture_phone_game import (
     PicturePhoneGameState,
     PicturePhoneGameError,

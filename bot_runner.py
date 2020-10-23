@@ -45,7 +45,7 @@ class BotRunner:
         self.games = GameDatabase(debug=True)
 
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.INFO)
+                     level=logging.DEBUG)
 
     ### PUBLIC ###
 
@@ -63,6 +63,7 @@ class BotRunner:
         try:
             game = self._get_game_for_group(chat_update)
             game.start(context)
+        # TODO: handle these in PicturePhoneGame
         except NotEnoughPlayersError:
             self._reply_text(
                 update=chat_update,

@@ -1,4 +1,5 @@
 from bot_texts import BotTexts
+from game_errors import *
 
 WRITING = "WRITING"
 DRAWING = "DRAWING"
@@ -45,16 +46,6 @@ class PicturePhoneGameLogic:
 
     def _next_phase(self, phase_to_get_successor_of):
         return DRAWING if phase_to_get_successor_of == WRITING else WRITING
-
-
-class PicturePhoneGameError(RuntimeError):
-    pass
-
-class NotEnoughPlayersError(PicturePhoneGameError):
-    pass
-
-class PlayerAlreadyJoinedError(PicturePhoneGameError):
-    pass
 
 
 class PicturePhoneGameResults:
