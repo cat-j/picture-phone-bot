@@ -70,8 +70,11 @@ class BotRunner:
 
     def handle_reply(self, update, context):
         if self._is_for_bot(update):
-            game = self.games.get_game_for_message(update.message.reply_to_message)
-            game.play_turn(update, context)
+            try:
+                game = self.games.get_game_for_message(update.message.reply_to_message)
+                game.play_turn(update.message, context)
+            except KeyError:
+                context.bot.send_message(chat_id=update.effective_chat.id, text="That message isn't part of a game.")
 
     ### HELPERS ###
 

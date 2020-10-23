@@ -93,6 +93,9 @@ class PicturePhoneGameState:
     def get_next_player(self):
         return self.game_logic.next_player()
 
+    def play_turn(self, player_making_move, submission):
+        self.game_logic.play_turn(player_making_move, submission)
+
     def is_in_drawing_phase(self):
         return self.game_logic.current_phase == DRAWING
 
@@ -123,10 +126,7 @@ class PicturePhoneGame:
         try:
             self.game_state.start()
             player_id = self.game_state.get_next_player()
-            message = context.bot.send_message(
-                chat_id=player_id,
-                text="You're first! Reply to this message with a written prompt for the next player to draw."
-            )
+            message = context.bot.send_message(chat_id=player_id, text=BotTexts.first_player)
             self.game_database.put_game_for_message(message, self)
         except NotEnoughPlayersError:
             context.bot.send_message(
@@ -137,40 +137,39 @@ class PicturePhoneGame:
     def join_user(self, joining_user_id, context):
         try:
             self.game_state.join_player(joining_user_id)
-            if self.debug:
-                print("Player {} joined game {}".format(joining_user_id, self.game_id))
+            self._debug("Player {} joined game {}".format(joining_user_id, self.game_id))
             context.bot.send_message(
                 chat_id=joining_user_id,
                 text="You've joined game {}.".format(self.game_id)
             )
         except PicturePhoneGameError:
-            context.bot.send_message(
-                chat_id=joining_user_id,
-                text=BotTexts.already_joined
-            )
+            context.bot.send_message(chat_id=joining_user_id, text=BotTexts.already_joined)
 
-    def play_turn(self, update, context):
+    def play_turn(self, message, context):
+        self._debug(message)
         if self.game_state.is_in_drawing_phase():
-            context.bot.send_message(
-                chat_id=update.effective_chat.id,
-                text="simple simon, the ass man"
-            )
-        else:
-            if update.message.text:
-                # User submission is valid! Store it and advance to the next phase.
-                self.game_database.put_game_for_message(update.message, self)
-                context.bot.send_message(
-                    chat_id=update.effective_chat.id,
-                    text="YOU'RE CORRECT!"
-                )
+            if message.photo:
+                # User submission is valid! Store it and play turn.
+                self.game_database.put_game_for_message(message, self)
+                self.game_state.play_turn(player_making_move=message.from_user, submission=message.photo)
+                context.bot.send_message(chat_id=message.chat.id, text=BotTexts.submission_received)
             else:
-                context.bot.send_message(
-                    chat_id=update.effective_chat.id,
-                    text="Please try again with a description."
-                )
+                context.bot.send_message(chat_id=message.chat.id, text=BotTexts.drawing_phase_type_error)
+        else:
+            if message.text:
+                # User submission is valid! Store it and play turn.
+                self.game_database.put_game_for_message(message, self)
+                self.game_state.play_turn(player_making_move=message.from_user, submission=message.text)
+                context.bot.send_message(chat_id=message.chat.id, text=BotTexts.submission_received)
+            else:
+                context.bot.send_message(chat_id=message.chat.id, text=BotTexts.writing_phase_type_error)
 
     def min_players(self):
         return self.game_state.game_logic.MIN_PLAYERS
+
+    def _debug(self, message):
+        if self.debug:
+            print(message)
 
 
 class GameDatabase:
