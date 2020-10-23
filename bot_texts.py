@@ -7,6 +7,7 @@ class BotTexts:
     
     startplaying_game_not_created = "You haven't created a game yet."
     already_joined = "You've already joined that game."
+    message_not_in_game = "That message isn't part of a game."
     
     first_player = "You're first! Reply to this message with a written prompt for the next player to draw."
     writing_phase_type_error = "Please try again with a description."

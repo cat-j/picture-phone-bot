@@ -5,49 +5,6 @@ WRITING = "WRITING"
 DRAWING = "DRAWING"
 
 
-class PicturePhoneGameLogic:
-
-    def __init__(self, players=None):
-        self.players = players
-        self.finished = False
-        self.current_phase = self._starting_phase()
-        self.moves = PicturePhoneGameResults()
-        self.MIN_PLAYERS = 4
-
-    def next_player(self):
-        if self.players:
-            return self.players[0]
-        else:
-            raise PicturePhoneGameError("This game doesn't have players yet.")
-
-    def play_turn(self, player_making_move, submission):
-        if self.finished:
-            raise PicturePhoneGameError("Cannot play turn when game is already finished.")
-        else:
-            self._advance_phase()
-            self.moves.add_move(player_making_move, submission)
-            self.players = self.players[1:]
-            if not self.players:
-                self.finished = True
-
-    def set_players(self, new_players):
-        self.players = new_players
-
-    def results(self):
-        return self.moves
-
-    ### PRIVATE ###
-
-    def _starting_phase(self):
-        return WRITING
-
-    def _advance_phase(self):
-        self.current_phase = self._next_phase(self.current_phase)
-
-    def _next_phase(self, phase_to_get_successor_of):
-        return DRAWING if phase_to_get_successor_of == WRITING else WRITING
-
-
 class PicturePhoneGameResults:
 
     def __init__(self):
@@ -65,11 +22,14 @@ class PicturePhoneGameResults:
 
 class PicturePhoneGameState:
 
-    def __init__(self, game_id=0, debug=False):
+    def __init__(self, debug=False):
         self.players = set()
-        self.game_logic = PicturePhoneGameLogic()
-        self.game_id = game_id
+        self.remaining_players = []
+        self.results = PicturePhoneGameResults()
         self.started = False
+        self.finished = False
+        self.current_phase = self._starting_phase()
+        self.MIN_PLAYERS = 4
         self.debug = debug
 
     def join_player(self, joining_player):
@@ -80,28 +40,39 @@ class PicturePhoneGameState:
 
     def start(self):
         if not self._game_started():
-            if self._number_of_players() < self.game_logic.MIN_PLAYERS:
+            if self._number_of_players() < self.MIN_PLAYERS:
                 raise NotEnoughPlayersError(
-                    "Cannot start game until at least {} players have joined.".format(self.game_logic.MIN_PLAYERS)
+                    "Cannot start game until at least {} players have joined.".format(self.MIN_PLAYERS)
                 )
-            self.game_logic.set_players(list(self.players))
+            self._set_remaining_players(self.players)
             self.started = True
             return True
         else:
             raise PicturePhoneGameError("Game already started.")
 
     def get_next_player(self):
-        return self.game_logic.next_player()
+        return self.remaining_players[0]
 
     def play_turn(self, player_making_move, submission):
-        self.game_logic.play_turn(player_making_move, submission)
+        if self.finished:
+            raise PicturePhoneGameError("Cannot play turn when game is already finished.")
+        else:
+            self._advance_phase()
+            self.results.add_move(player_making_move, submission)
+            self.players = self.players[1:]
+            if not self.players:
+                self.finished = True
 
     def is_in_drawing_phase(self):
-        return self.game_logic.current_phase == DRAWING
+        return self.current_phase == DRAWING
 
     ### PRIVATE ###
 
     def _game_started(self):
+        return self.started
+
+    def _set_remaining_players(self, players):
+        self.remaining_players = list(players)
         return self.started
 
     def _add_player(self, joining_player):
@@ -112,6 +83,15 @@ class PicturePhoneGameState:
 
     def _number_of_players(self):
         return len(self.players)
+
+    def _advance_phase(self):
+        self.current_phase = self._next_phase(self.current_phase)
+
+    def _next_phase(self, phase_to_get_successor_of):
+        return DRAWING if phase_to_get_successor_of == WRITING else WRITING
+
+    def _starting_phase(self):
+        return WRITING
 
 
 class PicturePhoneGame:
@@ -165,7 +145,7 @@ class PicturePhoneGame:
                 context.bot.send_message(chat_id=message.chat.id, text=BotTexts.writing_phase_type_error)
 
     def min_players(self):
-        return self.game_state.game_logic.MIN_PLAYERS
+        return self.game_state.MIN_PLAYERS
 
     def _debug(self, message):
         if self.debug:
