@@ -15,6 +15,8 @@ from telegram import (
 from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
+    Filters,
+    MessageHandler,
     Updater
 )
 from telegram.error import Unauthorized
@@ -45,7 +47,7 @@ class BotRunner:
         self.games = GameDatabase(debug=True)
 
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.DEBUG)
+                     level=logging.INFO)
 
     def run_bot(self):
         self._register_handlers()
@@ -75,10 +77,14 @@ class BotRunner:
 
     ### OTHER HANDLERS ###
 
-    def _handle_button_press(self, button_press_update, context):
+    def handle_button_press(self, button_press_update, context):
         user_action = self._callback_query_data(button_press_update)
         if user_action == JOIN_GAME:
             self._join_user_who_pressed(button_press_update, context)
+
+    def handle_reply(self, update, context):
+        if update.message.reply_to_message.from_user.username == 'squatcobbler_bot':
+            context.bot.send_message(chat_id=update.effective_user.id, text="boston cream splat")
 
     ### HELPERS ###
 
@@ -128,7 +134,8 @@ class BotRunner:
             CommandHandler('start', self.start),
             CommandHandler('newgame', self.newgame),
             CommandHandler('startgame', self.startgame),
-            CallbackQueryHandler(self._handle_button_press)
+            CallbackQueryHandler(self.handle_button_press),
+            MessageHandler(Filters.reply, self.handle_reply)
         ]
 
         for handler in handlers:
