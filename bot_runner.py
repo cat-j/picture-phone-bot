@@ -3,10 +3,9 @@ import logging
 from bot_texts import BotTexts
 
 from picture_phone_game import (
+    GameDatabase,
     PicturePhoneGame,
-    PicturePhoneGameState,
-    PicturePhoneGameError,
-    NotEnoughPlayersError
+    PicturePhoneGameState
 )
 from telegram import (
     InlineKeyboardButton,
@@ -23,19 +22,6 @@ from telegram.error import Unauthorized
 
 
 JOIN_GAME = "join"
-
-
-class GameDatabase:
-
-    def __init__(self, debug=False):
-        self.contents = {}
-        self.debug = debug
-
-    def add_new_game(self, new_game_id):
-        self.contents[new_game_id] = PicturePhoneGame(new_game_id, self.debug)
-
-    def get_game(self, game_id):
-        return self.contents[game_id]
 
 
 class BotRunner:
@@ -83,10 +69,14 @@ class BotRunner:
             self._join_user_who_pressed(button_press_update, context)
 
     def handle_reply(self, update, context):
-        if update.message.reply_to_message.from_user.username == 'squatcobbler_bot':
-            context.bot.send_message(chat_id=update.effective_user.id, text="boston cream splat")
+        if self._is_for_bot(update):
+            game = self.games.get_game_for_message(update.message.reply_to_message)
+            game.play_turn(update, context)
 
     ### HELPERS ###
+
+    def _is_for_bot(self, reply_update):
+        return reply_update.message.reply_to_message.from_user.username == 'squatcobbler_bot'
 
     def _create_game_for_group(self, group_update):
         group_chat_id = self._chat_id_from_update(group_update)
@@ -94,12 +84,15 @@ class BotRunner:
 
     def _get_game_for_group(self, group_update):
         game_id = self._chat_id_from_update(group_update)
-        return self.games.get_game(game_id)
+        return self.games.get_game_by_id(game_id)
+
+    def _submission_id(self, submission_message):
+        return submission_message.reply_to_message
 
     def _join_user_who_pressed(self, button_press_update, context):
         joining_user_id = button_press_update.effective_user.id
         game_id = self._chat_id_from_update(button_press_update.callback_query)
-        game = self.games.get_game(game_id)
+        game = self.games.get_game_by_id(game_id)
 
         try:
             game.join_user(joining_user_id, context)

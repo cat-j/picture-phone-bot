@@ -93,6 +93,9 @@ class PicturePhoneGameState:
     def get_next_player(self):
         return self.game_logic.next_player()
 
+    def is_in_drawing_phase(self):
+        return self.game_logic.current_phase == DRAWING
+
     ### PRIVATE ###
 
     def _game_started(self):
@@ -110,19 +113,21 @@ class PicturePhoneGameState:
 
 class PicturePhoneGame:
 
-    def __init__(self, game_id, debug):
-        self.game = PicturePhoneGameState(debug=debug)
+    def __init__(self, game_id, game_database, debug):
+        self.game_state = PicturePhoneGameState(debug=debug)
+        self.game_database = game_database
         self.game_id = game_id
         self.debug = debug
 
     def start(self, update, context):
         try:
-            self.game.start()
-            player_id = self.game.get_next_player()
-            context.bot.send_message(
+            self.game_state.start()
+            player_id = self.game_state.get_next_player()
+            message = context.bot.send_message(
                 chat_id=player_id,
-                text="You're first! Write something for the next player to draw."
+                text="You're first! Reply to this message with a written prompt for the next player to draw."
             )
+            self.game_database.put_game_for_message(message, self)
         except NotEnoughPlayersError:
             context.bot.send_message(
                 chat_id=update.effective_chat.id,
@@ -131,7 +136,7 @@ class PicturePhoneGame:
 
     def join_user(self, joining_user_id, context):
         try:
-            self.game.join_player(joining_user_id)
+            self.game_state.join_player(joining_user_id)
             if self.debug:
                 print("Player {} joined game {}".format(joining_user_id, self.game_id))
             context.bot.send_message(
@@ -144,5 +149,50 @@ class PicturePhoneGame:
                 text=BotTexts.already_joined
             )
 
+    def play_turn(self, update, context):
+        if self.game_state.is_in_drawing_phase():
+            context.bot.send_message(
+                chat_id=update.effective_chat.id,
+                text="simple simon, the ass man"
+            )
+        else:
+            if update.message.text:
+                # User submission is valid! Store it and advance to the next phase.
+                self.game_database.put_game_for_message(update.message, self)
+                context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="YOU'RE CORRECT!"
+                )
+            else:
+                context.bot.send_message(
+                    chat_id=update.effective_chat.id,
+                    text="Please try again with a description."
+                )
+
     def min_players(self):
-        return self.game.game_logic.MIN_PLAYERS
+        return self.game_state.game_logic.MIN_PLAYERS
+
+
+class GameDatabase:
+
+    def __init__(self, debug=False):
+        self.games_by_id = {}
+        self.games_by_submission = {}
+        self.debug = debug
+
+    def add_new_game(self, new_game_id):
+        self.games_by_id[new_game_id] = PicturePhoneGame(new_game_id, self, self.debug)
+
+    def get_game_by_id(self, game_id):
+        return self.games_by_id[game_id]
+
+    def get_game_for_message(self, message):
+        submission_id = self._get_message_id(message)
+        return self.games_by_submission[submission_id]
+
+    def put_game_for_message(self, message, game_to_put):
+        submission_id = self._get_message_id(message)
+        self.games_by_submission[submission_id] = game_to_put
+
+    def _get_message_id(self, message):
+        return message.message_id
