@@ -1,7 +1,10 @@
 import logging
 
+from bot_texts import BotTexts
+
 from picture_phone_game import (
     PicturePhoneGame,
+    PicturePhoneGameState,
     PicturePhoneGameError,
     NotEnoughPlayersError
 )
@@ -14,6 +17,7 @@ from telegram.ext import (
     CommandHandler,
     Updater
 )
+from telegram.error import Unauthorized
 
 
 JOIN_GAME = "join"
@@ -32,16 +36,6 @@ class GameDatabase:
         return self.contents[game_id]
 
 
-class BotTexts:
-
-    def __init__(self):
-        self.start = "dutch apple ass"
-        self.newgame_group = "Join a new game of Picture Phone:"
-        self.newgame_other = "You need to be in a group to start a game."
-        self.startplaying_game_not_created = "You haven't created a game yet."
-        self.already_joined = "You've already joined that game."
-
-
 class BotRunner:
 
     def __init__(self):
@@ -49,7 +43,6 @@ class BotRunner:
         self.updater = Updater(token=self.token, use_context=True)
         self.dispatcher = self.updater.dispatcher
         self.games = GameDatabase(debug=True)
-        self.texts = BotTexts()
 
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                      level=logging.INFO)
@@ -57,10 +50,10 @@ class BotRunner:
     ### PUBLIC ###
 
     def start(self, chat_update, context):
-        self._reply_text(chat_update, context, self.texts.start)
+        self._reply_text(chat_update, context, BotTexts.start)
 
     def newgame(self, chat_update, context):
-        if chat_update.message.chat.type == 'group':
+        if chat_update.message.chat.type in ['group', 'supergroup']:
             self._reply_join_button(chat_update)
             self._create_game_for_group(chat_update)
         else:
@@ -69,18 +62,18 @@ class BotRunner:
     def startplaying(self, chat_update, context):
         try:
             game = self._get_game_for_group(chat_update)
-            game.start()
+            game.start(context)
         except NotEnoughPlayersError:
             self._reply_text(
                 update=chat_update,
                 context=context,
-                text_to_send="You must wait until {} players have joined!".format(game.MIN_PLAYERS)
+                text_to_send="You must wait until {} players have joined!".format(game.min_players())
             )
         except KeyError:
             self._reply_text(
                 update=chat_update,
                 context=context,
-                text_to_send=self.texts.startplaying_game_not_created
+                text_to_send=BotTexts.startplaying_game_not_created
             )
 
     def run_bot(self):
@@ -108,20 +101,17 @@ class BotRunner:
         game = self.games.get_game(game_id)
 
         try:
-            game.join_player(joining_user_id)
+            game.join_user(joining_user_id, context)
+        except Unauthorized:
             context.bot.send_message(
-                chat_id=joining_user_id,
-                text="You've joined game {}.".format(game_id)
-            )
-        except PicturePhoneGameError:
-            context.bot.send_message(
-                chat_id=joining_user_id,
-                text=self.texts.already_joined
+                chat_id=button_press_update.callback_query.message.chat_id,
+                text="You must talk to me so I can send you prompts and drawings! \
+                    Please start a conversation with me and try joining again."
             )
 
     def _reply_join_button(self, chat_update_to_reply_to):
         chat_update_to_reply_to.message.reply_text(
-            text=self.texts.newgame_group,
+            text=BotTexts.newgame_group,
             reply_markup=self._join_button(),
             quote=False
         )
@@ -130,7 +120,7 @@ class BotRunner:
         return chat_update.message.chat.id
 
     def _reply_not_in_group(self, chat_update_to_reply_to, context):
-        self._reply_text(chat_update_to_reply_to, context, self.texts.newgame_other)
+        self._reply_text(chat_update_to_reply_to, context, BotTexts.newgame_other)
 
     def _callback_query_data(self, button_press_update):
         return button_press_update.callback_query.data

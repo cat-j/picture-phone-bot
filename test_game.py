@@ -1,7 +1,7 @@
 import pytest
 
 from picture_phone_game import (
-    PicturePhoneGame,
+    PicturePhoneGameState,
     PicturePhoneGameError,
     PlayerAlreadyJoinedError,
     NotEnoughPlayersError
@@ -77,13 +77,23 @@ def test_cannot_start_already_started_game():
         game.start()
 
 
-# def test_0():
+def test_0():
+    players = [
+        "Jimmy McGill",
+        "Kim Wexler",
+        "Howard Hamlin",
+        "Chuck McGill"
+    ]
+    game = game_with_players(players)
 
+    game.start()
+
+    assert game.get_next_player() in players
 
 ### HELPERS ###
 
 def game_with_players(players):
-    game = PicturePhoneGame()
+    game = PicturePhoneGameState()
 
     for player in players:
         game.join_player(player)

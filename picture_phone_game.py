@@ -1,3 +1,5 @@
+from bot_texts import BotTexts
+
 WRITING = "WRITING"
 DRAWING = "DRAWING"
 
@@ -70,7 +72,7 @@ class PicturePhoneGameResults:
         return [move[1] for move in self.contents]
 
 
-class PicturePhoneGame:
+class PicturePhoneGameState:
 
     def __init__(self, game_id=0, debug=False):
         self.players = set()
@@ -97,6 +99,9 @@ class PicturePhoneGame:
         else:
             raise PicturePhoneGameError("Game already started.")
 
+    def get_next_player(self):
+        return self.game_logic.next_player()
+
     ### PRIVATE ###
 
     def _game_started(self):
@@ -105,10 +110,42 @@ class PicturePhoneGame:
     def _add_player(self, joining_player):
         if not joining_player in self.players:
             self.players.add(joining_player)
-            if self.debug:
-                print("Player {} joined game {}".format(joining_player, self.game_id))
         else:
             raise PlayerAlreadyJoinedError("Player {} is already in the game.".format(joining_player))
 
     def _number_of_players(self):
         return len(self.players)
+
+
+class PicturePhoneGame:
+
+    def __init__(self, game_id, debug):
+        self.game = PicturePhoneGameState(debug=debug)
+        self.game_id = game_id
+        self.debug = debug
+
+    def start(self, context):
+        self.game.start()
+        player_id = self.game.get_next_player()
+        context.bot.send_message(
+            chat_id=player_id,
+            text="You're first! Write something for the next player to draw."
+        )
+
+    def join_user(self, joining_user_id, context):
+        try:
+            self.game.join_player(joining_user_id)
+            if self.debug:
+                print("Player {} joined game {}".format(joining_user_id, self.game_id))
+            context.bot.send_message(
+                chat_id=joining_user_id,
+                text="You've joined game {}.".format(self.game_id)
+            )
+        except PicturePhoneGameError:
+            context.bot.send_message(
+                chat_id=joining_user_id,
+                text=BotTexts.already_joined
+            )
+
+    def min_players(self):
+        return self.game.game_logic.MIN_PLAYERS
