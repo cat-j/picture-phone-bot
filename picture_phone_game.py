@@ -59,8 +59,8 @@ class PicturePhoneGameState:
         else:
             self._advance_phase()
             self.results.add_move(player_making_move, submission)
-            self.players = self.players[1:]
-            if not self.players:
+            self.remaining_players = self.remaining_players[1:]
+            if not self.remaining_players:
                 self.finished = True
 
     def is_in_drawing_phase(self):
@@ -94,11 +94,42 @@ class PicturePhoneGameState:
         return WRITING
 
 
+class PicturePhoneGamePhase:
+
+    def __init__(self, game):
+        self.game = game
+
+    def play_turn(self, message, context):
+        raise NotImplementedError("Subclass responsiblity")
+
+    def next_phase(self):
+        raise NotImplementedError("Subclass responsiblity")
+
+
+class TextPhase(PicturePhoneGamePhase):
+
+    def play_turn(self, message, context):
+        self.game.play_text_turn(message, context)
+
+    def next_phase(self):
+        return DrawingPhase(self.game)
+
+
+class DrawingPhase(PicturePhoneGamePhase):
+
+    def play_turn(self, message, context):
+        self.game.play_drawing_turn(message, context)
+
+    def next_phase(self):
+        return TextPhase(self.game)
+
+
 class PicturePhoneGame:
 
     def __init__(self, game_id, game_database, debug):
         self.game_state = PicturePhoneGameState(debug=debug)
         self.game_database = game_database
+        self.current_phase = self._initial_phase()
         self.game_id = game_id
         self.debug = debug
 
@@ -127,22 +158,28 @@ class PicturePhoneGame:
 
     def play_turn(self, message, context):
         self._debug(message)
-        if self.game_state.is_in_drawing_phase():
-            if message.photo:
-                # User submission is valid! Store it and play turn.
-                self.game_database.put_game_for_message(message, self)
-                self.game_state.play_turn(player_making_move=message.from_user, submission=message.photo)
-                context.bot.send_message(chat_id=message.chat.id, text=BotTexts.submission_received)
-            else:
-                context.bot.send_message(chat_id=message.chat.id, text=BotTexts.drawing_phase_type_error)
+        self.current_phase.play_turn(message, context)
+
+    # yeah yeah repeated code pattern but I'll refactor it when it's fully working
+    def play_text_turn(self, message, context):
+        if message.text:
+            # User submission is valid! Store it and play turn.
+            self.game_database.put_game_for_message(message, self)
+            self.game_state.play_turn(player_making_move=message.from_user, submission=message.text)
+            context.bot.send_message(chat_id=message.chat.id, text=BotTexts.submission_received)
+            self._advance_phase()
         else:
-            if message.text:
-                # User submission is valid! Store it and play turn.
-                self.game_database.put_game_for_message(message, self)
-                self.game_state.play_turn(player_making_move=message.from_user, submission=message.text)
-                context.bot.send_message(chat_id=message.chat.id, text=BotTexts.submission_received)
-            else:
-                context.bot.send_message(chat_id=message.chat.id, text=BotTexts.writing_phase_type_error)
+            context.bot.send_message(chat_id=message.chat.id, text=BotTexts.writing_phase_type_error)
+        
+    def play_drawing_turn(self, message, context):
+        if message.photo:
+            # User submission is valid! Store it and play turn.
+            self.game_database.put_game_for_message(message, self)
+            self.game_state.play_turn(player_making_move=message.from_user, submission=message.photo)
+            context.bot.send_message(chat_id=message.chat.id, text=BotTexts.submission_received)
+            self._advance_phase()
+        else:
+            context.bot.send_message(chat_id=message.chat.id, text=BotTexts.drawing_phase_type_error)
 
     def min_players(self):
         return self.game_state.MIN_PLAYERS
@@ -150,6 +187,12 @@ class PicturePhoneGame:
     def _debug(self, message):
         if self.debug:
             print(message)
+
+    def _initial_phase(self):
+        return TextPhase(self)
+
+    def _advance_phase(self):
+        self.current_phase = self.current_phase.next_phase()
 
 
 class GameDatabase:
