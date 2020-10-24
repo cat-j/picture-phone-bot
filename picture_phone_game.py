@@ -158,7 +158,10 @@ class PicturePhoneGame:
 
     def play_turn(self, message, context):
         self._debug(message)
-        self.current_phase.play_turn(message, context)
+        try:
+            self.current_phase.play_turn(message, context)
+        except PicturePhoneGameError:
+            context.bot.send_message(chat_id=message.chat.id, text="That game is already finished!")
 
     # yeah yeah repeated code pattern but I'll refactor it when it's fully working
     def play_text_turn(self, message, context):
