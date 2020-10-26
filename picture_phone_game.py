@@ -7,14 +7,30 @@ class PicturePhoneGameResults:
     def __init__(self):
         self.contents = []
 
-    def add_move(self, player_making_move, submission):
-        self.contents.append((player_making_move, submission))
+    def add_move(self, move):
+        self.contents.append(move)
 
-    def players_in_order(self):
-        return [move[0] for move in self.contents]
 
-    def submissions_in_order(self):
-        return [move[1] for move in self.contents]
+class PicturePhoneGameMove:
+
+    def __init__(self, player_making_move, submission):
+        self.player = player_making_move
+        self.submission = submission
+
+    def send_self(self, chat_id, context):
+        raise NotImplementedError("Subclass responsibility")
+
+
+class WritingMove(PicturePhoneGameMove):
+    
+    def send_self(self, chat_id, context):
+        context.bot.send_message(chat_id=chat_id, text=self.submission)
+
+
+class DrawingMove(PicturePhoneGameMove):
+    
+    def send_self(self, chat_id, context):
+        context.bot.send_photo(chat_id=chat_id, photo=self.submission)
 
 
 class PicturePhoneGameState:
@@ -22,7 +38,6 @@ class PicturePhoneGameState:
     def __init__(self, debug=False):
         self.players = set()
         self.remaining_players = []
-        self.results = PicturePhoneGameResults()
         self.started = False
         self.finished = False
         self.MIN_PLAYERS = 4
@@ -53,11 +68,9 @@ class PicturePhoneGameState:
         if self.finished:
             raise PicturePhoneGameError("Cannot play turn when game is already finished.")
         else:
-            self.results.add_move(player_making_move, submission)
             self.remaining_players = self.remaining_players[1:]
             if not self.remaining_players:
                 self.finished = True
-
 
     ### PRIVATE ###
 
@@ -89,15 +102,26 @@ class PicturePhoneGamePhase:
         if self.accepts_message(message):
             # User submission is valid! Store it and play turn.
             self.game_database.put_game_for_message(message, self.game)
+            self.add_move(message)
             self.game_state.play_turn(
                 player_making_move=message.from_user,
                 submission=self.contents_for_phase(message)
             )
             context.bot.send_message(chat_id=message.chat.id, text=BotTexts.submission_received)
             self.game.advance_phase()
-            self.send_message_to_next_player(message, context)
+            try:
+                self.send_message_to_next_player(message, context)
+            except IndexError:
+                context.bot.send_message(chat_id=self.game.group_id(), text="Game finished")
+                self.game.send_results(context)
         else:
             context.bot.send_message(chat_id=message.chat.id, text=self.reply_to_invalid_message())
+
+    def add_move(self, message):
+        player_making_move = message.from_user.id
+        move_class = self.move_class()
+        move_to_add = move_class(player_making_move, self.contents_for_phase(message))
+        self.game.add_move(move_to_add)
 
     def next_phase(self):
         raise NotImplementedError("Subclass responsiblity")
@@ -112,6 +136,9 @@ class PicturePhoneGamePhase:
         raise NotImplementedError("Subclass responsiblity")
 
     def reply_to_invalid_message(self):
+        raise NotImplementedError("Subclass responsiblity")
+
+    def move_class(self):
         raise NotImplementedError("Subclass responsiblity")
 
 
@@ -132,6 +159,9 @@ class WritingPhase(PicturePhoneGamePhase):
     def reply_to_invalid_message(self):
         return BotTexts.writing_phase_type_error
 
+    def move_class(self):
+        return WritingMove
+
 
 class DrawingPhase(PicturePhoneGamePhase):
 
@@ -142,13 +172,16 @@ class DrawingPhase(PicturePhoneGamePhase):
         return message.photo
 
     def contents_for_phase(self, message):
-        return message.photo
+        return message.photo[-1]
 
     def send_message_to_next_player(self, message, context):
         self.game.send_photo_to_next_player(message, context)
 
     def reply_to_invalid_message(self):
         return BotTexts.drawing_phase_type_error
+
+    def move_class(self):
+        return DrawingMove
 
 
 class PicturePhoneGame:
@@ -157,6 +190,7 @@ class PicturePhoneGame:
         self.game_state = PicturePhoneGameState(debug=debug)
         self.game_database = game_database
         self.current_phase = self._initial_phase()
+        self.results = PicturePhoneGameResults()
         self.game_id = game_id
         self.debug = debug
 
@@ -190,21 +224,21 @@ class PicturePhoneGame:
         except PicturePhoneGameError:
             context.bot.send_message(chat_id=message.chat.id, text="That game is already finished!")
 
-    def send_text_to_next_player(self, message, context):
-        next_player_id = self.game_state.get_next_player()
-        sent_message = context.bot.send_message(chat_id=next_player_id, text=message.text)
-        self.game_database.put_game_for_message(sent_message, self)
-
-    def send_photo_to_next_player(self, message, context):
-        next_player_id = self.game_state.get_next_player()
-        sent_message = context.bot.send_photo(chat_id=next_player_id, photo=message.photo[-1])
-        self.game_database.put_game_for_message(sent_message, self)
-
     def min_players(self):
         return self.game_state.MIN_PLAYERS
 
     def advance_phase(self):
         self.current_phase = self.current_phase.next_phase()
+
+    def add_move(self, move_to_add):
+        self.results.add_move(move_to_add)
+
+    def send_results(self, context):
+        for result in self.results.contents:
+            result.send_self(self.group_id(), context)
+
+    def group_id(self):
+        return self.game_id
 
     def _debug(self, message):
         if self.debug:
